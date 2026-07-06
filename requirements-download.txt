@@ -1,0 +1,4 @@
+# Optional helpers for faster or China-friendly downloads.
+huggingface_hub>=0.32.0
+hf_xet>=1.1.0
+modelscope>=1.17.0

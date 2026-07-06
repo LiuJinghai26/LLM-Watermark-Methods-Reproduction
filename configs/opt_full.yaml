@@ -1,0 +1,51 @@
+seed: 20250713
+device: auto
+model_cache_dir: models/hf
+
+generation_model:
+  name: facebook/opt-1.3b
+  modelscope_id: facebook/opt-1.3b
+  torch_dtype: float16
+
+oracle_model:
+  name: facebook/opt-6.7b
+  modelscope_id: facebook/opt-6.7b
+  torch_dtype: float16
+
+dataset:
+  source: hf_text
+  name: allenai/c4
+  config: realnewslike
+  split: validation
+  cache_dir: data/hf_datasets
+  prompt_tokens: 64
+  completion_tokens: 200
+  max_samples: 200
+
+generation:
+  max_new_tokens: 200
+  do_sample: true
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 0
+
+watermark:
+  gamma: 0.25
+  delta: 2.0
+  key: 15485863
+  window_size: 1
+  entropy_threshold: 1.0
+  entropy_type: shannon
+
+methods:
+  - name: KGW
+    generation: kgw
+    detector: kgw
+  - name: SWEET
+    generation: sweet
+    detector: sweet
+  - name: EWD
+    generation: kgw
+    detector: ewd
+    reuse_generation_from: KGW
+    entropy_type: spike

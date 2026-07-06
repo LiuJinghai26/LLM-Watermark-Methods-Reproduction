@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Downloaded models and Hugging Face caches
+models/
+data/hf_datasets/
+data/cache/
+data/**/*.arrow
+data/**/*.parquet
+data/**/*.lock
+
+# Generated experiment outputs
+results/
+
+# LaTeX build artifacts
+report/*.aux
+report/*.bbl
+report/*.bcf
+report/*.blg
+report/*.fdb_latexmk
+report/*.fls
+report/*.log
+report/*.out
+report/*.run.xml
+report/*.synctex.gz
+report/*.toc
+report/_minted-*/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
