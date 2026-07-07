@@ -1,13 +1,14 @@
 # 云端运行 OPT-6.7B PPL
 
-本地 8GB 显存可以运行 OPT-1.3B 生成，但不适合同时加载 OPT-1.3B 和 OPT-6.7B 做 oracle PPL。正式 PPL 建议使用 24GB 及以上显存 GPU；16GB 可尝试 `device_map: auto` + CPU offload，但会慢很多。
+本地 8GB 显存可以运行 OPT-1.3B 生成，但不适合同时加载 OPT-1.3B 和 OPT-6.7B 做 oracle PPL。正式 PPL 建议使用 24GB 及以上显存 GPU；16GB 可尝试 `device_map: auto` + CPU offload，但会慢很多。当前正式结果使用云端完成，主实验输出位于 `results/opt_cloud_c4_500`，低熵补充实验输出位于 `results/opt_cloud_code_low_entropy`。
 
 ## 1. 上传项目
 
 把整个项目目录上传到云端实例，至少包含：
 
 - `configs/`
-- `data/c4_realnewslike_200.jsonl`
+- `data/c4_realnewslike_500.jsonl`
+- `data/code_low_entropy_200.jsonl`
 - `scripts/`
 - `watermark_lab/`
 - `requirements.txt`
@@ -42,18 +43,30 @@ python scripts/prepare_assets.py --config configs/opt_cloud_full_ppl.yaml --hf-m
 python scripts/run_experiment.py --config configs/opt_cloud_full_ppl.yaml --output-dir results/opt_cloud_test --max-samples 5 --max-new-tokens 32
 ```
 
-再运行 200 条完整数据：
+再运行 C4 RealNewsLike 500 条主实验：
 
 ```bash
-python scripts/run_experiment.py --config configs/opt_cloud_full_ppl.yaml --output-dir results/opt_cloud_full
-python scripts/plot_results.py --results-dir results/opt_cloud_full
+python scripts/run_experiment.py --config configs/opt_cloud_c4_500_ppl.yaml --output-dir results/opt_cloud_c4_500
+python scripts/plot_results.py --results-dir results/opt_cloud_c4_500
+```
+
+运行低熵代码补充实验：
+
+```bash
+python scripts/make_low_entropy_code_dataset.py --output data/code_low_entropy_200.jsonl --samples 200
+python scripts/run_experiment.py --config configs/opt_cloud_code_low_entropy_ppl.yaml --output-dir results/opt_cloud_code_low_entropy
+python scripts/plot_results.py --results-dir results/opt_cloud_code_low_entropy
 ```
 
 ## 5. 拷回结果
 
 重点拷回：
 
-- `results/opt_cloud_full/metrics.csv`
-- `results/opt_cloud_full/scores.csv`
-- `results/opt_cloud_full/generations.jsonl`
-- `results/opt_cloud_full/figures/*.png`
+- `results/opt_cloud_c4_500/metrics.csv`
+- `results/opt_cloud_c4_500/scores.csv`
+- `results/opt_cloud_c4_500/generations.jsonl`
+- `results/opt_cloud_c4_500/figures/*.png`
+- `results/opt_cloud_code_low_entropy/metrics.csv`
+- `results/opt_cloud_code_low_entropy/scores.csv`
+- `results/opt_cloud_code_low_entropy/generations.jsonl`
+- `results/opt_cloud_code_low_entropy/figures/*.png`

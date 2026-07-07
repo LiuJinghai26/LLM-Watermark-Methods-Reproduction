@@ -4,7 +4,13 @@
 
 - KGW: Kirchenbauer 等提出的绿名单 logit 偏置水印。
 - SWEET: 在 KGW 基础上只对高熵 token 嵌入和检测水印。
-- EWD: 熵加权水印检测方法。EWD 本身主要是检测器，因此本项目默认复用 KGW 生成文本，再用 EWD 加权 z-score 检测。
+- EWD: 熵加权水印检测方法。EWD 本身主要是检测器，本项目默认复用 KGW 生成文本，再用 EWD 加权 z-score 检测。
+
+当前正式结果已经完成云端复现实验：
+
+- 主实验：`results/opt_cloud_c4_500`，C4 RealNewsLike 500 条，OPT-1.3B 生成，OPT-6.7B 计算 PPL。
+- 补充实验：`results/opt_cloud_code_low_entropy`，低熵 Python 结构化代码 200 条，OPT-1.3B 生成，OPT-6.7B 计算 PPL。
+- 早期 200 条 C4 结果保留在 `results/opt_cloud_full`，小模型烟测保留在 `results/smoke`。
 
 ## 目录结构
 
@@ -12,9 +18,11 @@
 .
 ├── Paper/                  # 三篇论文 PDF
 ├── configs/                # 实验配置
-│   ├── opt_full.yaml       # 正式复现实验: OPT-1.3B + OPT-6.7B + C4
-│   └── smoke_tiny.yaml     # 小模型烟测配置
-├── data/                   # 数据集或 HF 数据缓存
+│   ├── opt_cloud_c4_500_ppl.yaml
+│   ├── opt_cloud_code_low_entropy_ppl.yaml
+│   ├── opt_cloud_full_ppl.yaml
+│   └── smoke_tiny.yaml
+├── data/                   # 本地 JSONL 数据与 HF 数据缓存
 ├── models/                 # HF 模型缓存目录
 ├── results/                # 实验输出 CSV/JSONL/图
 ├── scripts/                # 下载、实验、作图入口
@@ -30,9 +38,13 @@
 python -m pip install -r requirements.txt
 ```
 
-模型和数据默认缓存到当前项目下的 `models/hf` 与 `data/hf_datasets`。
+模型和数据默认缓存到当前项目下的 `models/hf` 与 `data/hf_datasets`。云端运行 OPT-6.7B PPL 时建议额外安装 `accelerate`：
 
-## 更快下载模型和数据
+```powershell
+python -m pip install accelerate
+```
+
+## 数据与模型准备
 
 推荐先安装下载加速依赖：
 
@@ -40,36 +52,28 @@ python -m pip install -r requirements.txt
 python -m pip install -r requirements-download.txt
 ```
 
-方式一：Hugging Face 镜像 + hf-xet 高性能下载。适合国内网络，模型仍缓存到本项目 `models/hf`。
+下载模型：
 
 ```powershell
-$env:HF_XET_HIGH_PERFORMANCE="1"
-python scripts\prepare_assets.py --config configs\opt_full.yaml --hf-mirror --xet-high-performance --skip-dataset
+python scripts\prepare_assets.py --config configs\opt_cloud_c4_500_ppl.yaml --hf-mirror --xet-high-performance --skip-dataset
 ```
 
-方式二：数据集不要整库下载，直接流式抽取本实验需要的 C4 RealNewsLike 200 条样本到本地 JSONL。
+如果 `hf-xet` 不稳定，可以回退到普通 Hugging Face 下载：
 
 ```powershell
-python scripts\prepare_assets.py --config configs\opt_full.yaml --hf-mirror --skip-models --dataset-samples 200 --dataset-output data\c4_realnewslike_200.jsonl
+python scripts\prepare_assets.py --config configs\opt_cloud_c4_500_ppl.yaml --hf-mirror --disable-xet --skip-dataset
 ```
 
-抽取完成后，用本地数据配置运行，避免每次实验访问远端 C4：
+抽取 C4 RealNewsLike 500 条本地 JSONL：
 
 ```powershell
-python scripts\run_experiment.py --config configs\opt_local_subset.yaml --output-dir results\opt_full
+python scripts\prepare_assets.py --config configs\opt_full.yaml --hf-mirror --skip-models --dataset-samples 500 --dataset-output data\c4_realnewslike_500.jsonl
 ```
 
-方式三：ModelScope 备选下载。若 Hugging Face 镜像不可用，可尝试从 ModelScope 下载模型到 `models/hf/facebook__opt-*`，再用本地路径配置运行。
+生成低熵代码补充数据：
 
 ```powershell
-python scripts\prepare_assets.py --config configs\opt_full.yaml --source modelscope --skip-dataset
-python scripts\run_experiment.py --config configs\opt_modelscope_local.yaml --output-dir results\opt_full
-```
-
-如果 `hf-xet` 在当前网络下不稳定，可以加 `--disable-xet` 回退到普通 Hugging Face 下载：
-
-```powershell
-python scripts\prepare_assets.py --config configs\opt_full.yaml --hf-mirror --disable-xet
+python scripts\make_low_entropy_code_dataset.py --output data\code_low_entropy_200.jsonl --samples 200
 ```
 
 ## 快速烟测
@@ -81,71 +85,52 @@ python scripts\run_experiment.py --config configs\smoke_tiny.yaml --output-dir r
 python scripts\plot_results.py --results-dir results\smoke
 ```
 
-当前烟测输出位于：
+## 正式实验
 
-- `results/smoke/scores.csv`
-- `results/smoke/metrics.csv`
-- `results/smoke/generations.jsonl`
-- `results/smoke/figures/*.png`
-
-## 正式 OPT 复现实验
-
-正式配置保持同一生成模型、同一 PPL 模型、同一数据集：
-
-- 生成模型: `facebook/opt-1.3b`
-- PPL/oracle 模型: `facebook/opt-6.7b`
-- 数据集: `allenai/c4` 的 `realnewslike` 配置
-- 生成长度: 200 tokens
-- 默认样本数: 200
-
-下载模型和数据缓存。默认脚本已经使用 `snapshot_download`，不会把 OPT-6.7B 加载进内存：
+C4 RealNewsLike 500 条主实验：
 
 ```powershell
-python scripts\prepare_assets.py --config configs\opt_full.yaml
+python scripts\run_experiment.py --config configs\opt_cloud_c4_500_ppl.yaml --output-dir results\opt_cloud_c4_500
+python scripts\plot_results.py --results-dir results\opt_cloud_c4_500
 ```
 
-运行完整实验：
+低熵代码补充实验：
 
 ```powershell
-python scripts\run_experiment.py --config configs\opt_full.yaml --output-dir results\opt_full
-python scripts\plot_results.py --results-dir results\opt_full
+python scripts\run_experiment.py --config configs\opt_cloud_code_low_entropy_ppl.yaml --output-dir results\opt_cloud_code_low_entropy
+python scripts\plot_results.py --results-dir results\opt_cloud_code_low_entropy
 ```
 
-如果显存不足，可以先减少样本数或跳过 PPL：
+当前脚本会同时加载 OPT-1.3B 生成模型和 OPT-6.7B PPL/oracle 模型。若显存不足，`device_map: auto` 可能触发 CPU offload，运行会明显变慢。
 
-```powershell
-python scripts\run_experiment.py --config configs\opt_full.yaml --output-dir results\opt_small --max-samples 20 --skip-ppl
-```
+## 结果摘要
 
-## 8GB 显存下的本地测试
+C4 RealNewsLike 500 条主实验：
 
-先确认本地 OPT-1.3B 能加载和生成：
+| 算法 | mean z | human mean z | AUROC | TPR@5%FPR | z>4 检出率 | z>4 误报率 | mean PPL | PPL vs Plain |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| KGW | 8.839 | -0.134 | 0.9955 | 0.990 | 92.2% | 0% | 21.388 | +7.986 |
+| SWEET | 9.716 | -0.057 | 0.9982 | 0.994 | 94.6% | 0% | 17.239 | +3.837 |
+| EWD | 9.669 | -0.056 | 0.9985 | 0.988 | 94.0% | 0% | 21.388 | +7.986 |
 
-```powershell
-python scripts\test_opt_model.py --config configs\opt_self_ppl.yaml --max-new-tokens 8
-```
+低熵代码 200 条补充实验：
 
-本地日常实验建议使用已下载的 200 条 JSONL 数据，避免再次访问远端 C4：
+| 算法 | mean z | human mean z | AUROC | TPR@5%FPR | z>4 检出率 | z>4 误报率 | mean PPL | PPL vs Plain |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| KGW | 9.110 | -2.252 | 1.000 | 1.000 | 97.0% | 0% | 16.060 | +1.569 |
+| SWEET | 9.013 | -0.867 | 1.000 | 1.000 | 98.0% | 0% | 15.570 | +1.078 |
+| EWD | 8.932 | -1.082 | 1.000 | 1.000 | 98.0% | 0% | 16.060 | +1.569 |
 
-```powershell
-# 不算 PPL，只验证三种水印检测链路。
-python scripts\run_experiment.py --config configs\opt_local_subset.yaml --output-dir results\opt_small --max-samples 20 --skip-ppl
+结果说明：
 
-# 用 OPT-1.3B 自身作为 oracle 计算 PPL，8GB 显存可跑，但不等价于论文 OPT-6.7B。
-python scripts\run_experiment.py --config configs\opt_self_ppl.yaml --output-dir results\opt_self_ppl --max-samples 20
-```
-
-正式 PPL 建议在云端使用 OPT-6.7B oracle：
-
-```powershell
-python scripts\run_experiment.py --config configs\opt_cloud_full_ppl.yaml --output-dir results\opt_cloud_full
-```
-
-云端详细步骤见 `docs/cloud_test.md`。
+- C4 500 主实验中，三种方法都能有效区分 human 与 watermarked 文本，且 `z>4` 阈值下没有误报。
+- SWEET 在两个数据集上都表现出更低的 PPL 增量，说明选择性跳过低熵 token 有助于降低质量损失。
+- EWD 复用 KGW 生成文本，因此 PPL 与 KGW 相同；它的差异体现在检测统计量上。
+- 低熵代码数据是合成结构化补充集，可用于观察熵相关检测行为，但不能等同于 HumanEval/MBPP 的真实代码生成评测。
 
 ## 报告
 
-报告源文件位于 `report/main.tex`，已引用 `report/figures/` 中的烟测结果图。编译：
+报告源文件位于 `report/main.tex`，当前已更新为云端正式实验结果，并引用 `report/figures/` 中的最新图。编译：
 
 ```powershell
 cd report
@@ -155,6 +140,6 @@ xelatex main.tex
 xelatex main.tex
 ```
 
-编译后得到 `report/main.pdf`。提交前请把封面中的姓名、学号、学院、专业替换为小组真实信息；如果完成了 OPT 正式实验，请用 `results/opt_full` 中的新图覆盖 `report/figures` 并更新报告表格。
+编译后得到 `report/main.pdf`。提交前请把封面中的姓名、学号、学院、专业替换为小组真实信息。
 
-实验设计审查和数据规模建议见 `docs/experiment_review.md`。
+实验设计审查和结果分析见 `docs/experiment_review.md`，云端运行步骤见 `docs/cloud_test.md`。
