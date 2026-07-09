@@ -8,7 +8,7 @@
 
 - `configs/`
 - `data/c4_realnewslike_500.jsonl`
-- `data/code_low_entropy_200.jsonl`
+- `data/humaneval_164.jsonl`
 - `scripts/`
 - `watermark_lab/`
 - `requirements.txt`
@@ -53,7 +53,7 @@ python scripts/plot_results.py --results-dir results/opt_cloud_c4_500
 运行低熵代码补充实验：
 
 ```bash
-python scripts/make_low_entropy_code_dataset.py --output data/code_low_entropy_200.jsonl --samples 200
+python scripts/make_humaneval_dataset.py --output data/humaneval_164.jsonl
 python scripts/run_experiment.py --config configs/opt_cloud_code_low_entropy_ppl.yaml --output-dir results/opt_cloud_code_low_entropy
 python scripts/plot_results.py --results-dir results/opt_cloud_code_low_entropy
 ```

@@ -19,8 +19,8 @@ ppl:
 
 dataset:
   source: local_jsonl
-  path: data/code_low_entropy_200.jsonl
-  max_samples: 200
+  path: data/humaneval_164.jsonl
+  max_samples: 164
 
 generation:
   max_new_tokens: 128
