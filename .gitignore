@@ -24,9 +24,6 @@ data/**/*.arrow
 data/**/*.parquet
 data/**/*.lock
 
-# Generated experiment outputs
-results/
-
 # LaTeX build artifacts
 report/*.aux
 report/*.bbl
